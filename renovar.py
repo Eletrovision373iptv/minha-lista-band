@@ -1,8 +1,8 @@
 import requests
 import sys
 
-def capturar_sinal_real():
-    # Esta é a API que gera o link com sjwt que você viu no detector
+def pegar_link_seguro():
+    # API Spalla que gera o token sjwt
     api_url = "https://api.spalla.top/api/v1/public/video/play/8/0/0"
     
     headers = {
@@ -12,35 +12,32 @@ def capturar_sinal_real():
     }
 
     try:
-        print("Solicitando link com token à API Spalla...")
-        response = requests.get(api_url, headers=headers, timeout=15)
-        response.raise_for_status()
-        data = response.json()
+        # Timeout de 10 segundos para nao travar o GitHub
+        print("Conectando a API (Limite de 10s)...")
+        r = requests.get(api_url, headers=headers, timeout=10)
+        r.raise_for_status()
         
-        # Extrai a URL que contém o sjwt
-        link_token = data.get('data', {}).get('url')
-        
-        if link_token:
-            # Força a qualidade 1080p se necessário
-            if "playlist.m3u8" in link_token and "playlist-1080p" not in link_token:
-                link_token = link_token.replace("playlist.m3u8", "playlist-1080p.m3u8")
-            return link_token
+        link = r.json().get('data', {}).get('url')
+        if link:
+            # Força 1080p se disponível
+            return link.replace("playlist.m3u8", "playlist-1080p.m3u8")
         return None
     except Exception as e:
-        print(f"Erro na API: {e}")
+        print(f"Erro ao conectar: {e}")
         return None
 
-link_final = capturar_sinal_real()
+link_final = pegar_link_seguro()
 
-# Configuração para o VLC aceitar o sinal
-vlc_config = '|Referer=https://www.band.com.br/&Origin=https://www.band.com.br&User-Agent=Mozilla/5.0'
+# Headers para o VLC nao dar erro 403
+vlc_headers = '|Referer=https://www.band.com.br/&Origin=https://www.band.com.br&User-Agent=Mozilla/5.0'
 
 if link_final:
-    print(f"Sucesso! Link com token capturado.")
     with open("band.m3u", "w") as f:
-        f.write("#EXTM3U\n")
-        f.write("#EXTINF:-1, Band Ao Vivo\n")
-        f.write(f"{link_final}{vlc_config}")
+        f.write(f"#EXTM3U\n#EXTINF:-1, Band Ao Vivo\n{link_final}{vlc_headers}")
+    print("Sucesso! Arquivo band.m3u atualizado.")
 else:
-    print("Não foi possível capturar o link dinâmico.")
-    sys.exit(1)
+    print("Falha total. Gerando link de emergencia para nao travar.")
+    # Link de emergencia caso a API esteja fora
+    emergencia = "https://evp-singular-band.akamaized.net/out/v1/7888258e80714f33a824497e88949f57/playlist.m3u8"
+    with open("band.m3u", "w") as f:
+        f.write(f"#EXTM3U\n#EXTINF:-1, Band Ao Vivo\n{emergencia}{vlc_headers}")
