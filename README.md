@@ -1,2 +1,2 @@
-# minha-lista-band
-tv
+selenium
+webdriver-manager
