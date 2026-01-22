@@ -1,9 +1,8 @@
 import requests
 import sys
 
-def capturar_sinal():
-    # Esta é a URL da API da Spalla que fornece o sinal para a Band
-    # O ID '8' geralmente corresponde ao sinal nacional ao vivo
+def capturar_direto():
+    # Esta é a URL da API secreta que gera o link de sinal da Band
     api_url = "https://api.spalla.top/api/v1/public/video/play/8/0/0"
     
     headers = {
@@ -13,31 +12,27 @@ def capturar_sinal():
     }
 
     try:
-        print("Solicitando link de streaming à API Spalla...")
+        print("Solicitando link de streaming diretamente à API...")
         response = requests.get(api_url, headers=headers, timeout=10)
         data = response.json()
         
-        # Extrai a URL do campo 'url' dentro do JSON de resposta
-        link_m3u8 = data.get('data', {}).get('url')
+        # Extrai a URL do vídeo de dentro dos dados da API
+        link = data.get('data', {}).get('url')
         
-        if link_m3u8:
-            # Força a qualidade 1080p se estiver no formato padrão
-            if "playlist.m3u8" in link_m3u8:
-                link_m3u8 = link_m3u8.replace("playlist.m3u8", "playlist-1080p.m3u8")
-            return link_m3u8
+        if link:
+            # Garante que pegamos a melhor qualidade (1080p)
+            return link.replace("playlist.m3u8", "playlist-1080p.m3u8")
         return None
     except Exception as e:
-        print(f"Erro na requisição: {e}")
+        print(f"Erro na API: {e}")
         return None
 
-link_final = capturar_sinal()
+link_final = capturar_direto()
 
 if link_final:
-    print(f"Link capturado com sucesso: {link_final}")
+    print(f"Sucesso! Link capturado: {link_final}")
     with open("band.m3u", "w") as f:
-        f.write("#EXTM3U\n")
-        f.write("#EXTINF:-1, Band Ao Vivo\n")
-        f.write(link_final)
+        f.write(f"#EXTM3U\n#EXTINF:-1, Band Ao Vivo\n{link_final}")
 else:
-    print("Não foi possível obter o link da API.")
+    print("Falha ao obter sinal da API.")
     sys.exit(1)
